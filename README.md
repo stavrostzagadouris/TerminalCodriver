@@ -20,6 +20,9 @@ cd TerminalCodriver
 Install dependencies: Make sure you have Python installed on your system. Then, install required libraries using pip:
 
 pip install -r requirements.txt
+
+Create your own .env file based on the example and enter at least an openai api key and temp. Everything else is optional.
+
 Usage
 To run TerminalCodriver, simply execute the following command in your terminal:
 
