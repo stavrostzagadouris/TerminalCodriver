@@ -8,8 +8,11 @@
 # example: ?how do I make a firewall rule to block all access to 8080
 
 import time, os, socket, subprocess
+from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import Completer, Completion
 from openai import OpenAI
 from dotenv import load_dotenv
+
 load_dotenv() #pull .env variables in
 
 client = OpenAI(api_key=os.environ['OPEN_AI_KEY'])
@@ -21,12 +24,13 @@ lmstudioModel = os.environ['lmstudioModel']
 windows = {"role": "system", "content": "Your name is Codriver. You are a virtual assistant embedded within the Windows Terminal running Powershell, specialized in aiding users with PowerShell and Windows commands that work within Powershell. Your role is to provide accurate and efficient command suggestions, troubleshooting tips, and explanations. Your tone is professional yet approachable, ensuring users feel comfortable seeking your assistance. You understand common PowerShell scripts, Windows system commands, and administrative tasks. Keep your responses short if the user only wants to know how to do something. Example 'how do I list a folders contents?' simply reply with 'dir'"}
 linux = {"role": "system", "content": "Your name is Codriver. You are a virtual assistant embedded within the Linux Terminal, specialized in aiding users with Bash commands and Linux system administration. Your role is to provide accurate and efficient command suggestions, troubleshooting tips, and explanations. Your tone is professional yet approachable, ensuring users feel comfortable seeking your assistance. You understand common Bash scripts, Linux system commands, and administrative tasks. Keep your responses short if the user only wants to know how to do something. Example 'how do I list a folders contents?' simply reply with 'dir'"}
 
-#logic to set bot terminal mode
+#logic to set bot terminal mode and tab completion
 os_type = 'linux' if os.name == 'posix' else 'windows'
+
 if os_type == 'linux':
     defaultIdentity = linux
 else:
-    defaultIdentity = windows
+    defaultIdentity = windows  
 
 history = [defaultIdentity] #fill history with identity to start the conversation
 costing = "placeholder"
@@ -34,9 +38,9 @@ model = os.environ['defaultModel'] #set this in your .env
 modelTemp = 0.8
 
 #welcome message
-banner = f"\n\033[94mCodriver\x1b[0m is now online.\n\x1b[90m💬 Start your command with ? if you want to query the AI for help.\n⌨️ Otherwise just work in the terminal as normal and all code is passed through.\n🔁 !gpt4 or !llm -- Model selection\n👋 !exit -- Quit\x1b[0m"
+banner = f"\n\033[94mCodriver\x1b[0m is now online.\n\x1b[90m💬 Start your command with ? if you want to query the AI for help.\n⌨️ Otherwise just work in the terminal as normal and all code is passed through.\n🔁 !gpt4o or !llm -- Model selection\n👋 !exit -- Quit\x1b[0m"
 
-#clear screen
+#clear screen (can probably happen up top when bot mode is set...)
 if os_type == 'linux':
     os.system('clear')
 else:
@@ -49,15 +53,11 @@ def stream_openai(prompt, history):
     global num_tokens, prompt_token_count, model
     fullMessage = ""
     user_response_obj = {"role": "user", "content": prompt}
-
     history.append(user_response_obj)
-    
     # Send the first message that will continually be edited
     response = client.chat.completions.create(model=model, messages=history, temperature=modelTemp, stream=True)
-
     print("\n\033[94mCodriver:\x1b[0m", end='')
     fullMessage = ""
-
     for data in response:
         for choice in data.choices:
             # Check if 'choice.delta.content' exists and is not None
@@ -87,7 +87,6 @@ def is_port_listening(ip_address, port):
 
 #needed for keeping track of dir we're in
 current_directory = os.getcwd()
-
 
 def handle_cd_command(command):
     global current_directory
@@ -127,19 +126,36 @@ def run_powershell_command_with_directory(command, directory):
     else:
         print("Error:\n", result.stderr)
 
+class PathCompleter(Completer):
+    def get_completions(self, document, complete_event):
+        text = document.text_before_cursor.strip()
+        if not text:
+            return
+        entries = os.listdir('.')
+        for entry in entries:
+            if entry.startswith(text):
+                yield Completion(entry, start_position=-len(text))
+
 # MODIFY: Main loop utilizes updated PowerShell function
 def main():
     command_history = []
     global current_directory, client  # Ensure we modify the global variable
-    
+    session = PromptSession(completer=PathCompleter())  # Create a prompt session with completer
+
     while True:
         print("\n")
         
         # Display the current directory
         if os_type == "windows":
-            command = input(f"{current_directory}\033[36m>\033[0m ")
+            try:
+                command = input(f"{current_directory}\033[36m>\033[0m ")
+            except EOFError:
+                break
         else:
-            command = input(f"{current_directory}\033[36m$\033[0m ")
+            try:
+                command = input(f"{current_directory}\033[36m$\033[0m ")
+            except EOFError:
+                break
         
         # Exit on specific command
         if command.lower() in ['!exit', '!quit']:
@@ -150,18 +166,19 @@ def main():
         elif command.startswith('?'):
             ai_prompt = command[1:].strip()
             ai_response = stream_openai(ai_prompt,history)
-            resetConvoHistory()
-
+            #resetConvoHistory()
             command_history.append(command)
-        elif command == '!gpt4':
+
+        elif command == '!gpt4o':
             model = "gpt-4o-mini"
             client = OpenAI(api_key=os.environ['OPEN_AI_KEY'])
             print(f"\x1b[90mModel set to {model}.\x1b[0m")
             continue
+
         elif command == '!llm':
             if is_port_listening(lmstudioIP, lmstudioPort):
                 model = lmstudioModel
-                client = OpenAI(base_url="http://192.168.64.123:1234/v1", api_key="lm-studio")
+                client = OpenAI(base_url=f"http://{lmstudioIP}:{lmstudioPort}/v1", api_key="lm-studio")
                 print(f"\x1b[90mModel set to {model}.\x1b[0m")
             else:
                 print(f"\x1b[90mLLM not online. Model remains {model}.\x1b[0m")

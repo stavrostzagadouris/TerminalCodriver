@@ -1,1 +1,6 @@
-- no tab completion, not sure if this is possible but I sure hope it is!
+- no tab completion -- working on it though not sure if this is possible but I sure hope it is!
+- llm ip and port are hardcoded regardless of .env currently -- easy fix, just gotta do it
+- maybe should include convo history instead of just clearing it after every chat
+- will also require a !reset command to clear history on command
+- need a !help command to list banner again once it's scrolled off screen if needed
+- not sure how readline will be handled in requirements as it will fail on windows, which is why pyreadline is there
