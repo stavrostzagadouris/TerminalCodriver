@@ -130,7 +130,7 @@ def run_powershell_command_with_directory(command, directory):
 # MODIFY: Main loop utilizes updated PowerShell function
 def main():
     command_history = []
-    global current_directory  # Ensure we modify the global variable
+    global current_directory, client  # Ensure we modify the global variable
     
     while True:
         print("\n")
@@ -155,7 +155,7 @@ def main():
             command_history.append(command)
         elif command == '!gpt4':
             model = "gpt-4o-mini"
-            client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
+            client = OpenAI(api_key=os.environ['OPEN_AI_KEY'])
             print(f"\x1b[90mModel set to {model}.\x1b[0m")
             continue
         elif command == '!llm':
