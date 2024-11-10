@@ -13,7 +13,7 @@ To get started with TerminalCodriver, follow these steps:
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/TerminalCodriver.git
+   git clone https://github.com/jiberwabish/TerminalCodriver.git
 Navigate to the project directory:
 
 cd TerminalCodriver
@@ -21,12 +21,13 @@ Install dependencies: Make sure you have Python installed on your system. Then, 
 
 pip install -r requirements.txt
 
-Create your own .env file based on the example and enter at least an openai api key and temp. Everything else is optional.
+Create your own .env file based on the example and enter at least an openai api key. Everything else is optional.
 
 Usage
 To run TerminalCodriver, simply execute the following command in your terminal:
 
-python terminal_codriver.py
+python codriver.py
+
 Command Passing
 You can type any command normally, and it will be executed in your terminal.
 
