@@ -1,4 +1,3 @@
 - no tab completion -- working on it though not sure if this is possible but I sure hope it is!
-- will also require a !reset command to clear history on command
 - need a !help command to list banner again once it's scrolled off screen if needed
 - certain powershell commands won't execute as they act like scripts and no matter your execution policy, it doesn't seem to be enable-able within the python subprocess. :( not sure what to do about this....

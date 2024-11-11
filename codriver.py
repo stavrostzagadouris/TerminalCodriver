@@ -36,7 +36,7 @@ model = os.environ['defaultModel'] #set this in your .env
 modelTemp = 0.8
 
 #welcome message
-banner = f"\n\033[94mCodriver\x1b[0m is now online.\n\x1b[90m💬 Start your command with ? if you want to query the AI for help.\n⌨️ Otherwise just work in the terminal as normal and all code is passed through.\n🔁 !gpt4o or !llm -- Model selection\n👋 !exit -- Quit\x1b[0m"
+banner = f"\n\033[94mCodriver\x1b[0m is now online.\n\x1b[90m💬 Start your command with ? if you want to query the AI for help.\n⌨️ Otherwise just work in the terminal as normal and all code is passed through.\n💀 Start a AI query with ! and it will automatically run the command instead of just telling you how to (possibly dangerous!)\n🔁 gpt4o or llm -- Model selection\n👋 exit -- Quit\x1b[0m"
 
 #clear screen (can probably happen up top when bot mode is set...)
 if os_type == 'linux':
@@ -66,6 +66,26 @@ def stream_openai(prompt, history):
                 fullMessage += chunk
     history.append({"role": "assistant", "content": fullMessage})
     #return fullMessage
+#used for just auto running commands you ask it to without printing command to screen
+def command_openai(prompt, history):
+    global num_tokens, prompt_token_count, model
+    fullMessage = ""
+    user_response_obj = {"role": "user", "content": f"The user is asking you to run a command that accomplishes the following: {prompt} -- Since this is a request for YOU to run the command it is VITAL that you reply ONLY with the command. No codeblock. No comments. ONLY REPLY WITH THE COMMAND SO THAT IT CAN BE SENT STRAIGHT THROUGH TO THE OS AND WORK AS EXPECTED."}
+    history.append(user_response_obj)
+    # Send the first message that will continually be edited
+    response = client.chat.completions.create(model=model, messages=history, temperature=modelTemp, stream=True)
+    #print("\n\033[94mCodriver:\x1b[0m", end='')
+    fullMessage = ""
+    for data in response:
+        for choice in data.choices:
+            # Check if 'choice.delta.content' exists and is not None
+            if choice.delta and choice.delta.content:
+                chunk = choice.delta.content
+                # Using end='' to avoid adding a new line after each print
+                #print(chunk, end='')
+                fullMessage += chunk
+    history.append({"role": "assistant", "content": fullMessage})
+    return fullMessage
 
 def resetConvoHistory():
     global history, defaultIdentity
@@ -145,7 +165,7 @@ def main():
                 break
         
         # Exit on specific command
-        if command.lower() in ['!exit', '!quit']:
+        if command.lower() in ['exit', 'quit']:
             print("\033[94mCodriver\x1b[0m: See you next time.")
             break
         
@@ -155,14 +175,23 @@ def main():
             ai_response = stream_openai(ai_prompt,history)
             #resetConvoHistory()
             command_history.append(command)
+        
+        # Ai assistance to just run the command without checking
+        elif command.startswith('!'):
+            ai_prompt = command[1:].strip()
+            ai_response = command_openai(ai_prompt,history)
+            #resetConvoHistory()
+            command_history.append(command)
+            print(f"\n\033[94mCodriver:\x1b[0m Running {ai_response}:")
+            run_powershell_command_with_directory(ai_response, current_directory)
 
-        elif command == '!gpt4o':
+        elif command == 'gpt4o':
             model = "gpt-4o-mini"
             client = OpenAI(api_key=os.environ['OPEN_AI_KEY'])
             print(f"\x1b[90mModel set to {model}.\x1b[0m")
             continue
 
-        elif command == '!llm':
+        elif command == 'llm':
             if is_port_listening(lmstudioIP, lmstudioPort):
                 model = lmstudioModel
                 client = OpenAI(base_url=f"http://{lmstudioIP}:{lmstudioPort}/v1", api_key="lm-studio")

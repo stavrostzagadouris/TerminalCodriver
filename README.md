@@ -4,8 +4,9 @@ Windows or Linux -- OpenAI or LM-Studio right in your terminal with you. All com
 ## Features
 
 - **Dynamically detects** whether you're using Linux or Windows.
-- **Passes commands** straight through to your OS.
+- **Passes normal commands** straight through to your OS.
 - **Chat functionality**: Start any command with `?` to chat and get quick answers to your queries.
+- **Auto command running**: Start any command with `!` and your codriver will tell you the command it's going to run AND just run it for you (be careful with this) eg. !how much space do I have left on my C drive? -- It will just run Get-PSDrive C:
 
 ## Installation
 
