@@ -8,8 +8,6 @@
 # example: ?how do I make a firewall rule to block all access to 8080
 
 import time, os, socket, subprocess
-from prompt_toolkit import PromptSession
-from prompt_toolkit.completion import Completer, Completion
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -126,21 +124,10 @@ def run_powershell_command_with_directory(command, directory):
     else:
         print("Error:\n", result.stderr)
 
-class PathCompleter(Completer):
-    def get_completions(self, document, complete_event):
-        text = document.text_before_cursor.strip()
-        if not text:
-            return
-        entries = os.listdir('.')
-        for entry in entries:
-            if entry.startswith(text):
-                yield Completion(entry, start_position=-len(text))
-
 # MODIFY: Main loop utilizes updated PowerShell function
 def main():
     command_history = []
     global current_directory, client  # Ensure we modify the global variable
-    session = PromptSession(completer=PathCompleter())  # Create a prompt session with completer
 
     while True:
         print("\n")
