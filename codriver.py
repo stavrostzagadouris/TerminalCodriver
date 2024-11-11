@@ -70,7 +70,7 @@ def stream_openai(prompt, history):
 def command_openai(prompt, history):
     global num_tokens, prompt_token_count, model
     fullMessage = ""
-    user_response_obj = {"role": "user", "content": f"The user is asking you to run a command that accomplishes the following: {prompt} -- Since this is a request for YOU to run the command it is VITAL that you reply ONLY with the command. No codeblock. No comments. ONLY REPLY WITH THE COMMAND SO THAT IT CAN BE SENT STRAIGHT THROUGH TO THE OS AND WORK AS EXPECTED."}
+    user_response_obj = {"role": "user", "content": f"The user is asking you to run a command that accomplishes the following: {prompt} -- Since this is a request for YOU to run the command it is VITAL that you reply ONLY with the command. No codeblock. No comments. ONLY REPLY WITH THE COMMAND SO THAT IT CAN BE SENT STRAIGHT THROUGH TO THE OS AND WORK AS EXPECTED. If it's not possible to do what the user wants, just reply with the suitable COMMAND to print out why to the screen."}
     history.append(user_response_obj)
     # Send the first message that will continually be edited
     response = client.chat.completions.create(model=model, messages=history, temperature=modelTemp, stream=True)
