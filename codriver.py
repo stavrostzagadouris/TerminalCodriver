@@ -36,7 +36,7 @@ model = os.environ['defaultModel'] #set this in your .env
 modelTemp = 0.8
 
 #welcome message
-banner = f"\n\033[94mCodriver\x1b[0m is now online.\n\x1b[90m💬 Start your command with ? if you want to query the AI for help.\n⌨️ Otherwise just work in the terminal as normal and all code is passed through.\n💀 Start a AI query with ! and it will automatically run the command instead of just telling you how to (possibly dangerous!)\n🔁 gpt4o or llm -- Model selection\n👋 exit -- Quit\x1b[0m"
+banner = f"\n\033[94mCodriver\x1b[0m is now online.\n\x1b[90m💬 Start your command with ? if you want to query the AI for help.\n⌨️ Otherwise just work in the terminal as normal and all code is passed through.\n💀 Start an AI query with ! and it will automatically run the command instead of just telling you how to (possibly dangerous!)\n🔁 gpt4o or llm -- Model selection\n👋 exit -- Quit\x1b[0m"
 
 #clear screen (can probably happen up top when bot mode is set...)
 if os_type == 'linux':
