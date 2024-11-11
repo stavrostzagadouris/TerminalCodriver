@@ -183,7 +183,15 @@ def main():
             #resetConvoHistory()
             command_history.append(command)
             print(f"\n\033[94mCodriver:\x1b[0m Running {ai_response}:")
-            run_powershell_command_with_directory(ai_response, current_directory)
+
+            try:
+                if os_type == 'windows':
+                    run_powershell_command_with_directory(ai_response, current_directory)
+                else:
+                    os.chdir(current_directory)  # Ensure we're in the right directory on Linux
+                    os.system(ai_response)
+            except Exception as e:
+                print(f"An error occurred while executing command: {e}")
 
         elif command == 'gpt4o':
             model = "gpt-4o-mini"
