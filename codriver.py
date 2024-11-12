@@ -53,7 +53,13 @@ model = os.environ['defaultModel'] #set this in your .env
 modelTemp = 0.8
 
 #welcome message
-banner = f"\n\033[94mCodriver\x1b[0m is now online.\n\x1b[90m💬 Start your command with ? if you want to query the AI for help.\n⌨️ Otherwise just work in the terminal as normal and all code is passed through.\n💀 Start an AI query with ! and it will automatically run the command instead of just telling you how to (possibly dangerous! There are safeguards in play, but you never know.)\n🔁 gpt4o or llm -- Model selection\n⬅️ reset - Resets conversation history.\n👋 exit -- Quit\x1b[0m"
+banner = f"""\n\033[94mCodriver\x1b[0m is now online.\n\x1b[90m💬 Start your command with ? if you want to query the AI for help.
+            \n💀 Start an AI query with ! and it will automatically run the command instead of just telling you how to 
+            (possibly dangerous! There are safeguards in play, but you never know.)
+            \n⌨️ Otherwise just work in the terminal as normal and all code is passed through.
+            \n🔁 gpt4o or llm -- Model selection
+            \n⬅️ reset - Resets conversation history.
+            \n👋 exit -- Quit\x1b[0m"""
 
 #clear screen (can probably happen up top when bot mode is set...)
 def clear_screen():
@@ -85,7 +91,10 @@ def stream_openai(prompt, history):
 def command_openai(prompt, history):
     global num_tokens, prompt_token_count, model
     fullMessage = ""
-    user_response_obj = {"role": "user", "content": f"The user is asking you to run a command that accomplishes the following: {prompt} -- Since this is a request for YOU to run the command it is VITAL that you reply ONLY with the command. No codeblock. No comments. ONLY REPLY WITH THE COMMAND SO THAT IT CAN BE SENT STRAIGHT THROUGH TO THE OS AND WORK AS EXPECTED. If it's not possible to do what the user wants or it's too dangerous, just reply with the suitable COMMAND to print out why to the screen."}
+    user_response_obj = {"role": "user", "content": f"""The user is asking you to run a command that accomplishes the following: {prompt} 
+                         -- Since this is a request for YOU to run the command it is VITAL that you reply ONLY with the command. 
+                         No codeblock. No comments. ONLY REPLY WITH THE COMMAND SO THAT IT CAN BE SENT STRAIGHT THROUGH TO THE OS AND WORK AS EXPECTED. 
+                         If it's not possible to do what the user wants or it's too dangerous, just reply with the suitable COMMAND to print out why to the screen."""}
     history.append(user_response_obj)
     # Send the first message that will continually be edited
     response = client.chat.completions.create(model=model, messages=history, temperature=modelTemp, stream=True)
