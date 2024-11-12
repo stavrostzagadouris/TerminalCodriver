@@ -19,8 +19,25 @@ lmstudioPort = os.environ['lmstudioPort']
 lmstudioModel = os.environ['lmstudioModel']
 
 #variable I use as a pre-prompt to provide the bot direction based on the terminal it's in
-windows = {"role": "system", "content": "Your name is Codriver. You are a virtual assistant embedded within the Windows Terminal running Powershell, specialized in aiding users with PowerShell and Windows commands that work within Powershell. Your role is to provide accurate and efficient command suggestions, troubleshooting tips, and explanations. Your tone is professional yet approachable, ensuring users feel comfortable seeking your assistance. You understand common PowerShell scripts, Windows system commands, and administrative tasks. Keep your responses short if the user only wants to know how to do something. Example 'how do I list a folders contents?' simply reply with 'dir'"}
-linux = {"role": "system", "content": "Your name is Codriver. You are a virtual assistant embedded within the Linux Terminal, specialized in aiding users with Bash commands and Linux system administration. Your role is to provide accurate and efficient command suggestions, troubleshooting tips, and explanations. Your tone is professional yet approachable, ensuring users feel comfortable seeking your assistance. You understand common Bash scripts, Linux system commands, and administrative tasks. Keep your responses short if the user only wants to know how to do something. Example 'how do I list a folders contents?' simply reply with 'dir'"}
+windows = {"role": "system", "content": """Your name is Codriver. You are a virtual assistant embedded 
+            within the Windows Terminal running Powershell, specialized in aiding users with PowerShell 
+            and Windows commands that work within Powershell. 
+            Your role is to provide accurate and efficient command suggestions, troubleshooting tips, and explanations. 
+            You also have the ability to run commands yourself, but only when specifically told to reply
+            with a command.
+            Your tone is professional yet approachable, ensuring users feel comfortable seeking your assistance. You understand 
+            common PowerShell scripts, Windows system commands, and administrative tasks. Keep your 
+            responses short if the user only wants to know how to do something. 
+            Example: 'how do I list a folders contents?' simply reply with 'dir'"""}
+linux = {"role": "system", "content": """Your name is Codriver. You are a virtual assistant 
+            embedded within the Linux Terminal, specialized in aiding users with Bash commands 
+            and Linux system administration. 
+            Your role is to provide accurate and efficient command suggestions, troubleshooting tips, and explanations. 
+            You also have the ability to run commands yourself, but only when specifically told to reply
+            with a command. Your tone is professional yet approachable, ensuring users feel comfortable seeking your assistance. You understand 
+            common Bash scripts, Linux system commands, and administrative tasks. Keep your 
+            responses short if the user only wants to know how to do something. 
+            Example: 'how do I list a folders contents?' simply reply with 'dir'"""}
 
 #logic to set bot terminal mode and tab completion
 os_type = 'linux' if os.name == 'posix' else 'windows'
@@ -36,16 +53,14 @@ model = os.environ['defaultModel'] #set this in your .env
 modelTemp = 0.8
 
 #welcome message
-banner = f"\n\033[94mCodriver\x1b[0m is now online.\n\x1b[90m💬 Start your command with ? if you want to query the AI for help.\n⌨️ Otherwise just work in the terminal as normal and all code is passed through.\n💀 Start an AI query with ! and it will automatically run the command instead of just telling you how to (possibly dangerous!)\n🔁 gpt4o or llm -- Model selection\n👋 exit -- Quit\x1b[0m"
+banner = f"\n\033[94mCodriver\x1b[0m is now online.\n\x1b[90m💬 Start your command with ? if you want to query the AI for help.\n⌨️ Otherwise just work in the terminal as normal and all code is passed through.\n💀 Start an AI query with ! and it will automatically run the command instead of just telling you how to (possibly dangerous! There are safeguards in play, but you never know.)\n🔁 gpt4o or llm -- Model selection\n⬅️ reset - Resets conversation history.\n👋 exit -- Quit\x1b[0m"
 
 #clear screen (can probably happen up top when bot mode is set...)
-if os_type == 'linux':
-    os.system('clear')
-else:
-    os.system('cls')
-
-# print the pre-defined banner at the top of the terminal
-print(banner)
+def clear_screen():
+    if os_type == 'linux':
+        os.system('clear')
+    else:
+        os.system('cls')
 
 def stream_openai(prompt, history):
     global num_tokens, prompt_token_count, model
@@ -148,7 +163,9 @@ def run_powershell_command_with_directory(command, directory):
 def main():
     command_history = []
     global current_directory, client  # Ensure we modify the global variable
-
+    clear_screen()
+    print(banner)
+    
     while True:
         print("\n")
         
@@ -192,6 +209,7 @@ def main():
                     os.system(ai_response)
             except Exception as e:
                 print(f"An error occurred while executing command: {e}")
+            resetConvoHistory()
 
         elif command == 'gpt4o':
             model = "gpt-4o-mini"
@@ -207,6 +225,12 @@ def main():
             else:
                 print(f"\x1b[90mLLM not online. Model remains {model}.\x1b[0m")
         
+        elif command =='reset':
+            resetConvoHistory()
+            clear_screen()
+            print(banner)
+            print(f"\n\033[94mCodriver:\x1b[0m OK. Let's start fresh.")
+
         # Handle 'cd' commands
         # Check if the command is a drive change (like 'D:')
         elif command.endswith(':') and len(command) == 2:
