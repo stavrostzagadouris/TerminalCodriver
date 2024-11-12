@@ -1,4 +1,4 @@
-##Latest updates
+## Latest updates
 Nov 11, 2024 - Stavros
 - updated readme
 - added 'reset' command to reset ai conversation history if need be
