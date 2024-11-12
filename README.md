@@ -1,3 +1,16 @@
+##Latest updates
+Nov 11, 2024 - Stavros
+- updated readme
+- added 'reset' command to reset ai conversation history if need be
+- cleaned up code a bit and instructions for bot
+
+Nov 10, 2024 - Stavros
+- added autoexecution mode, you just say what you want and it crafts and runs the command for you
+eg. !how much space is left on my C drive?
+
+
+
+
 # TerminalCodriver
 Windows or Linux -- OpenAI or LM-Studio right in your terminal with you. All commands are just sent straight through to your terminal, however you have the option to ask AI a question right in the terminal by prepending your command with a '?'. 
 
