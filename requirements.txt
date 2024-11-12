@@ -1,3 +1,2 @@
 openai
 python-dotenv
-prompt_toolkit
