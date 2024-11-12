@@ -63,6 +63,7 @@ pip install -r requirements.txt
 Create your own .env file based on the example and enter at least an openai api key. Everything else is optional.
 
 **Usage**
+
 To run TerminalCodriver, simply execute the following command in your terminal:
 
 ```bash
@@ -70,9 +71,11 @@ python codriver.py
 ```
 
 **Command Passing**
+
 You can type any command normally, and it will be executed in your terminal.
 
 **Chat Feature**
+
 To ask a question, prefix your command with ?. For example:
 
 ```bash
