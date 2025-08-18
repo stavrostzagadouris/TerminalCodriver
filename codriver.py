@@ -294,21 +294,42 @@ def main():
             # Initialize a temporary OpenAI client for classification
             # Using gpt-5-nano 
             # This call does not affect the main conversation history.
-            classification_client = OpenAI(api_key=os.environ.get('OPEN_AI_KEY'))
-            print("\x1b[90mClassifying command... \x1b[0m")
+
+
+
+
+# Prefer model from .env (classifyingModel) or fall back to existing classifyingModel
+            model_choice = (os.environ.get('classifyingModel') or classifyingModel or "gpt-5-nano").strip()
+
+            if model_choice.lower() == "lmstudio":
+                # Use local lmstudio but verify it's listening
+                if is_port_listening(modellogic.lmstudioIP, modellogic.lmstudioPort):
+                    classification_client = OpenAI(
+                        base_url=f"http://{modellogic.lmstudioIP}:{modellogic.lmstudioPort}/v1",
+                        api_key="lm-studio"
+                    )
+                    model_for_classification = modellogic.lmstudioModel
+                    print("\x1b[90mClassifying command using local LLM (lmstudio)... \x1b[0m")
+                else:
+                    # Fallback to OpenAI if lmstudio not reachable
+                    print("\x1b[91mclassifyingModel=lmstudio but lmstudio is not reachable. Falling back to OpenAI.\x1b[0m")
+                    classification_client = OpenAI(api_key=os.environ.get('OPEN_AI_KEY'))
+                    model_for_classification = "gpt-5-nano"
+            else:
+                # Treat model_choice as an OpenAI model name
+                classification_client = OpenAI(api_key=os.environ.get('OPEN_AI_KEY'))
+                model_for_classification = model_choice
+                print(f"\x1b[90mClassifying command using OpenAI model: {model_for_classification}...\x1b[0m")
+
             classification_system_prompt = {
                 "role": "system",
                 "content": "You are a command classifier. Your task is to analyze user input and determine its intent. Respond with only one of the following words: 'QUERY' if the user is asking a question or talking to an AI, 'COMMAND' if the user wants an AI to generate and run a command, or 'SHELL' if the user is directly typing a shell command. Do not include any other text or explanation."
             }
-            
-            classification_user_prompt = {
-                "role": "user",
-                "content": f"User input: {command}"
-            }
-            
+            classification_user_prompt = {"role": "user", "content": f"User input: {command}"}
+
             try:
                 classification_response = classification_client.chat.completions.create(
-                    model=classifyingModel, # Using gpt-5-nano for classification
+                    model=model_for_classification,
                     messages=[classification_system_prompt, classification_user_prompt],
                     stream=False
                 )
@@ -316,8 +337,9 @@ def main():
                 print(f"\x1b[90mProcessing {intent}... \x1b[0m")
             except Exception as e:
                 print(f"\x1b[91mCodriver: Error classifying command with AI: {e}. Defaulting to shell execution.\x1b[0m")
-                intent = "SHELL" # Default to shell if classification fails
+                intent = "SHELL"
 
+           
             if intent == 'QUERY':
                 ai_prompt = command.strip() # No need to remove '?' as it's now a classified query
                 modellogic.stream_openai(ai_prompt, history)
