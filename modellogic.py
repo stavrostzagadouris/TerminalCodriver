@@ -13,8 +13,8 @@ client = OpenAI(api_key=os.environ.get('OPEN_AI_KEY'))
 lmstudioIP = os.environ.get('lmstudioIP')
 lmstudioPort = os.environ.get('lmstudioPort')
 lmstudioModel = os.environ.get('lmstudioModel')
-model = os.environ.get('defaultModel', 'gpt-4o-mini')
-modelTemp = os.environ.get('modelTemp')
+model = os.environ.get('defaultModel')
+classifyingModel = os.environ.get('classifyingModel')
 
 def get_client():
     """Returns the current OpenAI client."""
@@ -51,6 +51,7 @@ def stream_openai(prompt, history):
                 full_message += chunk
                 
     history.append({"role": "assistant", "content": full_message})
+    print("\n")
     return full_message
 
 def command_openai(prompt, history):

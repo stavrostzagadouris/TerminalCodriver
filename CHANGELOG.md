@@ -4,6 +4,7 @@
 - updated models
 - added intent from commands so no longer need to tell the ai specifically what you're doing
 - can pipe output to ai for interpretation, if there are errors it will tell you how to fix them
+- tab completion kinda, you tab through selections instead of typing then tabbing...
 
 ## November 11, 2024
 - Updated readme

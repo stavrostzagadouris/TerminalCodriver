@@ -9,11 +9,32 @@ import subprocess
 from dotenv import load_dotenv
 from openai import OpenAI
 from prompt_toolkit import PromptSession
-from prompt_toolkit.completion import PathCompleter
+from prompt_toolkit.completion import PathCompleter, Completer, Completion
+from prompt_toolkit.document import Document
+from prompt_toolkit.key_binding.defaults import load_key_bindings as default_key_bindings
+
+class CustomShellPathCompleter(Completer):
+    def __init__(self):
+        self.path_completer = PathCompleter()
+
+    def get_completions(self, document: Document, complete_event):
+        text_before_cursor = document.text_before_cursor
+        
+        # If the line ends with a space, or if there's no text yet,
+        # we want to suggest paths from the current directory.
+        if text_before_cursor.endswith(' ') or not text_before_cursor.strip():
+            # Create a temporary document with an empty string to force PathCompleter
+            # to list all files/directories in the current location.
+            temp_document = Document('', 0)
+            yield from self.path_completer.get_completions(temp_document, complete_event)
+        else:
+            # Otherwise, let PathCompleter handle the completion of the current word.
+            yield from self.path_completer.get_completions(document, complete_event)
+
 from prompt_toolkit.styles import Style
 
 
-import new_modellogic as modellogic
+import modellogic as modellogic
 
 load_dotenv()
 
@@ -42,6 +63,7 @@ if os_type == 'windows':
 
 defaultIdentity = linux_prompt if os_type == 'linux' else windows_prompt
 history = [defaultIdentity]
+classifyingModel = os.environ.get('classifyingModel')
 
 # Welcome banner
 banner = f"""
@@ -121,7 +143,7 @@ def main():
     print(banner)
 
     # Create a PromptSession with a PathCompleter for filenames
-    path_completer = PathCompleter()
+    path_completer = CustomShellPathCompleter()
     
     # Define the style for the prompt components
     style = Style.from_dict({
@@ -273,7 +295,7 @@ def main():
             # Using gpt-5-nano 
             # This call does not affect the main conversation history.
             classification_client = OpenAI(api_key=os.environ.get('OPEN_AI_KEY'))
-            
+            print("\x1b[90mClassifying command... \x1b[0m")
             classification_system_prompt = {
                 "role": "system",
                 "content": "You are a command classifier. Your task is to analyze user input and determine its intent. Respond with only one of the following words: 'QUERY' if the user is asking a question or talking to an AI, 'COMMAND' if the user wants an AI to generate and run a command, or 'SHELL' if the user is directly typing a shell command. Do not include any other text or explanation."
@@ -286,11 +308,12 @@ def main():
             
             try:
                 classification_response = classification_client.chat.completions.create(
-                    model="gpt-5-nano", # Using gpt-5-nano for classification
+                    model=classifyingModel, # Using gpt-5-nano for classification
                     messages=[classification_system_prompt, classification_user_prompt],
                     stream=False
                 )
                 intent = classification_response.choices[0].message.content.strip().upper()
+                print(f"\x1b[90mProcessing {intent}... \x1b[0m")
             except Exception as e:
                 print(f"\x1b[91mCodriver: Error classifying command with AI: {e}. Defaulting to shell execution.\x1b[0m")
                 intent = "SHELL" # Default to shell if classification fails
@@ -301,10 +324,9 @@ def main():
             elif intent == 'COMMAND':
                 ai_prompt = command.strip() # No need to remove '!' as it's now a classified command request
                 ai_response = modellogic.command_openai(ai_prompt, history)
-                print(f"\n\033[94mCodriver:\033[0m I would like to run this command: {ai_response}")
-                confirmation = input(f"\n\033[94mCodriver:\033[0m May I? (y/n)")
-                if confirmation.lower() == 'y':   
-                    print(f"\n\033[94mCodriver:\033[0m Running {ai_response}")
+                confirmation = input(f"\n\033[94mCodriver:\033[0m I would like to run this command:\n\n {ai_response}\n\nMay I? y/n")
+                if confirmation.lower() in ('y','','yes'):   
+                    print(f"\n\x1b[90mRunning {ai_response}\x1b[0m")
                     if os_type == 'windows':
                         run_powershell_command(ai_response, current_directory)
                     else:
