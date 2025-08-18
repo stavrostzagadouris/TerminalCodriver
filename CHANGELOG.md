@@ -1,5 +1,10 @@
 # Changelog
 
+## August 17, 2025
+- updated models
+- added intent from commands so no longer need to tell the ai specifically what you're doing
+- can pipe output to ai for interpretation, if there are errors it will tell you how to fix them
+
 ## November 11, 2024
 - Updated readme
 - Added 'reset' command to reset ai conversation history if need be

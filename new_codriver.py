@@ -46,10 +46,9 @@ history = [defaultIdentity]
 # Welcome banner
 banner = f"""
 \033[94mCodriver\x1b[0m is now online.
-\x1b[90m💬 Start your command with ? to query the AI for help.
-💀 Start an AI query with ! and it will automatically run the command.
-🤖 pipe your command with a '?' to ai to ask it about the output -- 'dir |? how many files are in here?'
-⌨️ Otherwise just work in the terminal as normal.
+\x1b[90m🤖 Codriver decides your intent automatically.
+💬 Type a shell command directly, ask the ai a question, or ask the ai to run a command for you.
+⌨️ Pipe your command along with a '?' to ai to ask it about the output. eg. 'dir |? how many files are in here?'
 🔁 gpt-5-mini or llm -- Model selection
 ⬅️ reset - Resets conversation history.
 👋 exit -- Quit\x1b[0m
