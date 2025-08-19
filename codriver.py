@@ -71,9 +71,9 @@ banner = f"""
 \x1b[90m🤖 Codriver decides your intent automatically.
 💬 Type a shell command directly, ask the ai a question, or ask the ai to run a command for you.
 ⌨️ Pipe your command along with a '?' to ai to ask it about the output. eg. 'dir |? how many files are in here?'
-🔁 gpt-5-mini or llm -- Model selection
+🔁 gpt-4.1 or llm -- Model selection
 ⬅️ reset - Resets conversation history.
-👋 exit -- Quit\x1b[0m
+👋 exit -- Quit
 """
 
 def clear_screen():
@@ -130,7 +130,7 @@ def run_powershell_command(command, directory):
         os.chdir(directory)
         # By removing check=True, we let PowerShell print its own errors to the console,
         # which feels more natural than Python catching it and printing a traceback.
-        subprocess.run(["powershell", "-Command", command])
+        subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-Command", command])
     except FileNotFoundError:
         print("Error: 'powershell' command not found. Is PowerShell installed and in your PATH?")
     except Exception as e:
@@ -162,6 +162,7 @@ def main():
                 ('class:directory', f"\n{current_directory}"),
                 ('class:prompt', f"{prompt_char} "),
             ]
+            print(f"\n\x1b[90mMain Model: {modellogic.get_model()} -- Intent Model: {classifyingModel}\x1b[0m")
             command = session.prompt(prompt_message)
 
         except (EOFError, KeyboardInterrupt):
@@ -191,7 +192,7 @@ def main():
                 # --- Function to run a command and capture output with a timeout ---
                 def run_and_capture(cmd):
                     if os_type == 'windows':
-                        args = ["powershell", "-Command", cmd]
+                        args = ["powershell", "-ExecutionPolicy", "Bypass", "-Command", cmd]
                         shell = False
                     else:
                         args = cmd
@@ -233,7 +234,7 @@ def main():
 
                     print(f"\n\033[94mCodriver:\033[0m It looks like that command failed. I think this might work instead:")
                     print(f"  \x1b[36m{suggested_command}\x1b[0m")
-                    confirmation = input(f"\n\033[94mCodriver:\033[0m Shall I run this corrected command instead? (y/n) ")
+                    confirmation = input(f"\n\033[94mCodriver:\033[0m Shall I run this corrected command instead? (Y/n) ")
                     
                     if confirmation.lower() == 'y':
                         real_command = suggested_command
@@ -264,8 +265,8 @@ def main():
             
         
             
-        elif command == 'gpt-5-mini':
-                modellogic.set_model("gpt-5-mini")
+        elif command == 'gpt-4.1':
+                modellogic.set_model("gpt-4.1")
                 modellogic.set_client(OpenAI(api_key=os.environ.get('OPEN_AI_KEY')))
                 print(f"\x1b[90mModel set to {modellogic.get_model()}.\x1b[0m")
             
@@ -292,14 +293,14 @@ def main():
             
         else: # New AI classification logic
             # Initialize a temporary OpenAI client for classification
-            # Using gpt-5-nano 
+            # Using gpt-4.1-nano 
             # This call does not affect the main conversation history.
 
 
 
 
 # Prefer model from .env (classifyingModel) or fall back to existing classifyingModel
-            model_choice = (os.environ.get('classifyingModel') or classifyingModel or "gpt-5-nano").strip()
+            model_choice = (os.environ.get('classifyingModel') or classifyingModel or "gpt-4.1-nano").strip()
 
             if model_choice.lower() == "lmstudio":
                 # Use local lmstudio but verify it's listening
@@ -309,12 +310,12 @@ def main():
                         api_key="lm-studio"
                     )
                     model_for_classification = modellogic.lmstudioModel
-                    print("\x1b[90mClassifying command using local LLM (lmstudio)... \x1b[0m")
+                    print(f"\x1b[90mClassifying intent using {modellogic.lmstudioModel}... \x1b[0m")
                 else:
                     # Fallback to OpenAI if lmstudio not reachable
                     print("\x1b[91mclassifyingModel=lmstudio but lmstudio is not reachable. Falling back to OpenAI.\x1b[0m")
                     classification_client = OpenAI(api_key=os.environ.get('OPEN_AI_KEY'))
-                    model_for_classification = "gpt-5-nano"
+                    model_for_classification = "gpt-4.1-nano"
             else:
                 # Treat model_choice as an OpenAI model name
                 classification_client = OpenAI(api_key=os.environ.get('OPEN_AI_KEY'))
@@ -346,7 +347,7 @@ def main():
             elif intent == 'COMMAND':
                 ai_prompt = command.strip() # No need to remove '!' as it's now a classified command request
                 ai_response = modellogic.command_openai(ai_prompt, history)
-                confirmation = input(f"\n\033[94mCodriver:\033[0m I would like to run this command:\n\n {ai_response}\n\nMay I? y/n")
+                confirmation = input(f"\n\033[94mCodriver:\033[0m I would like to run this command:\n\n {ai_response}\n\nMay I? (Y/n): ")
                 if confirmation.lower() in ('y','','yes'):   
                     print(f"\n\x1b[90mRunning {ai_response}\x1b[0m")
                     if os_type == 'windows':
