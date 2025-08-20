@@ -16,7 +16,7 @@ Treat it like a normal terminal, but ask for ai help when you want.
 *   **Auto Command Execution**: Describe what you want to achieve, and the Codriver will craft and execute the appropriate command for you (with your confirmation).
 *   **Pipe Command Output to AI**: Use the `|?` syntax to pipe the output of any shell command directly to the AI for analysis, summarization, or to ask follow-up questions based on the output. The Codriver can even suggest fixes for failed commands.
 *   **Flexible AI Model Support**: Easily switch between different AI models:
-    *   Type `gpt-5-mini` to use the OpenAI `gpt-5-mini` model (requires OpenAI API key).
+    *   Type `gpt-4.1` to use the OpenAI `gpt-4.1` model (requires OpenAI API key).
     *   Type `llm` to connect to a local LM Studio instance (requires LM Studio to be running and configured).
     *   Configure these details in the .env
 *   **Conversation History**: The Codriver maintains a history of your conversation, allowing for context-aware interactions.
@@ -56,10 +56,10 @@ OPEN_AI_KEY="your_openai_api_key_here"
 # lmstudioModel="your-lm-studio-model-name"
 
 # Optional: Default model to use at startup
-# defaultModel="gpt-5-mini"
+# defaultModel="gpt-4.1"
 
 # Optional: Model for classifying user intent (e.g., a smaller, faster model)
-# classifyingModel="gpt-5-nano"
+# classifyingModel="gpt-4.1-nano"
 ```
 
 **Key variables:**
@@ -67,9 +67,9 @@ OPEN_AI_KEY="your_openai_api_key_here"
 *   `OPEN_AI_KEY`: Your API key for OpenAI services.
 *   `lmstudioIP`: (Optional) The IP address where your LM Studio instance is running.
 *   `lmstudioPort`: (Optional) The port your LM Studio instance is listening on.
-*   `lmstudioModel`: (Optional) The name of the model loaded in your LM Studio instance.
+*   `lmstudioModel`: (Optional) The name of the model loaded in your LM Studio instance. Cosmetic only, not actually used
 *   `defaultModel`: (Optional) Specifies the AI model to use by default when the Codriver starts.
-*   `classifyingModel`: (Optional) A dedicated model for classifying user input intent (e.g., `gpt-5-nano` for faster classification).
+*   `classifyingModel`: (Optional) A dedicated model for classifying user input intent (e.g., `gpt-4.1-nano` for faster classification).
 
 ## Usage
 
@@ -125,9 +125,9 @@ The Codriver will run `dir`, capture its output, and then send both the command 
 
 ### Switching AI Models
 
-*   To use the OpenAI `gpt-5-mini` model:
+*   To use the OpenAI `gpt-4.1` model:
     ```bash
-    gpt-5-mini
+    gpt-4.1
     ```
 *   To connect to your local LM Studio instance:
     ```bash
