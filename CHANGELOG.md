@@ -1,5 +1,10 @@
 # Changelog
 
+## August 19, 2025
+- fixed tab completion properly
+- FYI gemma-3n-e4b is a slick, small and quick model if you want to go full local
+- models in use are displayed at all times now
+
 ## August 17, 2025
 - updated models
 - added intent from commands so no longer need to tell the ai specifically what you're doing

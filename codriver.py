@@ -18,18 +18,23 @@ class CustomShellPathCompleter(Completer):
         self.path_completer = PathCompleter()
 
     def get_completions(self, document: Document, complete_event):
-        text_before_cursor = document.text_before_cursor
-        
-        # If the line ends with a space, or if there's no text yet,
-        # we want to suggest paths from the current directory.
-        if text_before_cursor.endswith(' ') or not text_before_cursor.strip():
-            # Create a temporary document with an empty string to force PathCompleter
-            # to list all files/directories in the current location.
-            temp_document = Document('', 0)
-            yield from self.path_completer.get_completions(temp_document, complete_event)
-        else:
-            # Otherwise, let PathCompleter handle the completion of the current word.
-            yield from self.path_completer.get_completions(document, complete_event)
+        word_before_cursor = document.get_word_before_cursor(WORD=True)
+
+        # Get all possible completions from the PathCompleter by providing it with an empty document.
+        temp_document = Document('', 0)
+        all_completions = self.path_completer.get_completions(temp_document, complete_event)
+
+        # Then, we manually filter these completions based on the word before the cursor.
+        # For each match, we create a new Completion object with a corrected start_position.
+        # This tells prompt_toolkit to replace the word being typed.
+        for completion in all_completions:
+            if completion.text.lower().startswith(word_before_cursor.lower()):
+                yield Completion(
+                    completion.text,
+                    start_position=-len(word_before_cursor),
+                    display=completion.display,
+                    display_meta=completion.display_meta
+                )
 
 from prompt_toolkit.styles import Style
 
@@ -41,12 +46,32 @@ load_dotenv()
 # System prompts
 windows_prompt = {
     "role": "system",
-    "content": "Your name is Codriver. You are a virtual assistant embedded \n                within the Windows Terminal running Powershell, specialized in aiding users with PowerShell \n                and Windows commands that work within Powershell. \n                Your role is to provide accurate and efficient command suggestions, troubleshooting tips, and explanations. \n                You also have the ability to run commands yourself, but only when specifically told to reply\n                with a command.\n                Your tone is professional yet approachable, ensuring users feel comfortable seeking your assistance. You understand \n                common PowerShell scripts, Windows system commands, and administrative tasks. Keep your \n                responses short if the user only wants to know how to do something. \n                Example: 'how do I list a folders contents?' simply reply with 'dir'"
+    "content": """Your name is Codriver. You are a virtual assistant embedded within the 
+    Windows Terminal running Powershell, specialized in aiding users with PowerShell and 
+    Windows commands that work within Powershell. Your role is to provide accurate and 
+    efficient command suggestions, troubleshooting tips, and explanations. 
+    You will first be prompted to decide intent. Is the user asking you a question?
+    Is the user asking you to create and run a command yourself? OR is the user
+    just simply typing a command themself and they just need you to pass it straight to the terminal?
+    Your tone is professional yet approachable, ensuring users feel comfortable seeking your assistance. 
+    You understand PowerShell scripts, Windows system commands, and administrative tasks. You can help with
+    other coding as well, any language.
+    Keep your responses short if the user only wants to know how to do something. 
+    Example: 'how do I list a folders contents?' simply reply with 'dir'"""
 }
 
 linux_prompt = {
     "role": "system",
-    "content": "Your name is Codriver. You are a virtual assistant \n                embedded within the Linux Terminal, specialized in aiding users with Bash commands \n                and Linux system administration. \n                Your role is to provide accurate and efficient command suggestions, troubleshooting tips, and explanations. \n                You also have the ability to run commands yourself, but only when specifically told to reply\n                with a command. Your tone is professional yet approachable, ensuring users feel comfortable seeking your assistance. You understand \n                common Bash scripts, Linux system commands, and administrative tasks. Keep your \n                responses short if the user only wants to know how to do something. \n                Example: 'how do I list a folders contents?' simply reply with 'dir'"
+    "content": """Your name is Codriver. You are a virtual assistant embedded within the Linux Terminal, 
+    specialized in aiding users with Bash commands and Linux system administration. Your role is to 
+    provide accurate and efficient command suggestions, troubleshooting tips, and explanations. 
+    You will first be prompted to decide intent. Is the user asking you a question?
+    Is the user asking you to create and run a command yourself? OR is the user
+    just simply typing a command themself and they just need you to pass it straight to the terminal?
+    Your tone is professional yet approachable, ensuring users feel comfortable seeking your assistance. 
+    You understand common Bash scripts, Linux system commands, other programming languages and administrative 
+    tasks. Keep your responses short if the user only wants to know how to do something.
+    Example: 'how do I list a folders contents?' simply reply with 'dir'"""
 }
 
 # OS detection
@@ -263,7 +288,6 @@ def main():
 
         
             
-        
             
         elif command == 'gpt-4.1':
                 modellogic.set_model("gpt-4.1")
