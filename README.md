@@ -6,6 +6,8 @@ Work in powershell or bash with a codriver at your side.
 Auto-intent discovery allows you to just type either commands or questions or requests of the ai and it will handle it.
 Treat it like a normal terminal, but ask for ai help when you want.
 
+![TerminalCodriver Screenshot](screenshotOfCodriver.png)
+
 ## Features
 
 *   **Intelligent Command Classification**: Simply type your command, question, or request. The Codriver intelligently determines whether to execute it as a shell command, answer it as a query, or generate and run a command for you.
