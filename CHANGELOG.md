@@ -1,5 +1,8 @@
 # Changelog
 
+## September 22, 2025
+- added file context adding to history with the @ symbol, ie @mycode.py
+
 ## August 19, 2025
 - fixed tab completion properly
 - FYI gemma-3n-e4b is a slick, small and quick model if you want to go full local

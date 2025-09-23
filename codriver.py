@@ -96,6 +96,7 @@ banner = f"""
 \x1b[90m🤖 Codriver decides your intent automatically.
 💬 Type a shell command directly, ask the ai a question, or ask the ai to run a command for you.
 ⌨️ Pipe your command along with a '?' to ai to ask it about the output. eg. 'dir |? how many files are in here?'
+🗃️ Add file(s) to your conversation context with @, eg. '@mycode.ps1 @mynotes.txt' 
 🔁 gpt-4.1 or llm -- Model selection
 ⬅️ reset - Resets conversation history.
 👋 exit -- Quit
@@ -314,6 +315,41 @@ def main():
             
         elif command.startswith('cd'):
                 handle_cd_command(command)
+
+        elif command.split() and command.split()[0].lower() in ['ls', 'dir']:
+            if os_type == 'windows':
+                run_powershell_command(command, current_directory)
+            else:
+                os.chdir(current_directory)
+                os.system(command)
+
+        elif command.strip().startswith('@'):
+            filenames = [word.lstrip('@') for word in command.split() if word.startswith('@')]
+            
+            for filename in filenames:
+                absolute_path = os.path.abspath(os.path.join(current_directory, filename))
+
+                if not os.path.exists(absolute_path):
+                    print(f"\x1b[91mError: File not found at '{absolute_path}'\x1b[0m")
+                    continue
+
+                try:
+                    # Limit file size to avoid huge context windows. 1MB limit.
+                    if os.path.getsize(absolute_path) > 1 * 1024 * 1024:
+                        print(f"\x1b[91mError: File '{filename}' is larger than 1MB and will not be added.\x1b[0m")
+                        continue
+
+                    with open(absolute_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        file_content = f.read()
+                    
+                    history.append({
+                        "role": "user",
+                        "content": f"Here is the content of the file '{filename}':\n\n---\n{file_content}\n---"
+                    })
+                    print(f"\x1b[90mAdded '{filename}' to the conversation context. You can now ask questions about it.\x1b[0m")
+
+                except Exception as e:
+                    print(f"\x1b[91mError reading file '{filename}': {e}\x1b[0m")
             
         else: # New AI classification logic
             # Initialize a temporary OpenAI client for classification
@@ -323,7 +359,7 @@ def main():
 
 
 
-# Prefer model from .env (classifyingModel) or fall back to existing classifyingModel
+            # Prefer model from .env (classifyingModel) or fall back to existing classifyingModel
             model_choice = (os.environ.get('classifyingModel') or classifyingModel or "gpt-4.1-nano").strip()
 
             if model_choice.lower() == "lmstudio":
