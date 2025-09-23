@@ -10,19 +10,13 @@ Treat it like a normal terminal, but ask for ai help when you want.
 
 ## Features
 
-*   **Intelligent Command Classification**: Simply type your command, question, or request. The Codriver intelligently determines whether to execute it as a shell command, answer it as a query, or generate and run a command for you.
-*   **Seamless Shell Integration**: Pass normal shell commands directly through to your operating system.
-*   **AI Chat Functionality**: Ask the AI questions directly within your terminal for quick answers and explanations.
-*   **Auto Command Execution**: Describe what you want to achieve, and the Codriver will craft and execute the appropriate command for you (with your confirmation).
-*   **Pipe Command Output to AI**: Use the `|?` syntax to pipe the output of any shell command directly to the AI for analysis, summarization, or to ask follow-up questions based on the output. The Codriver can even suggest fixes for failed commands.
-*   **Flexible AI Model Support**: Easily switch between different AI models:
-    *   Type `gpt-4.1` to use the OpenAI `gpt-4.1` model (requires OpenAI API key).
-    *   Type `llm` to connect to a local LM Studio instance (requires LM Studio to be running and configured).
-    *   Configure these details in the .env
-*   **Conversation History**: The Codriver maintains a history of your conversation, allowing for context-aware interactions.
-*   **Reset Conversation**: Clear the current conversation history at any time by typing `reset`.
-*   **Enhanced Tab Completion**: Enjoy improved tab completion for shell commands, making your input faster and more accurate. (more like tab selection actually...)
-*   **Cross-Platform Compatibility**: Dynamically detects and adapts to your operating system (Windows or Linux).
+💬 Type a shell command directly, ask the ai a question, or ask the ai to run a command for you. Intent is discovered in real time.
+⌨️ Pipe your command along with a '?' to ai to ask it about the output. eg. 'dir |? how many files are in here?'
+🗃️ Add file(s) to your conversation context with @, eg. '@mycode.ps1 @mynotes.txt' 
+💾 Save the last AI response with save, eg. 'save mycode.py'
+🔁 gpt-4.1 or llm -- Model selection
+⬅️ reset - Resets conversation history.
+👋 exit -- Quit
 
 ## Installation
 
