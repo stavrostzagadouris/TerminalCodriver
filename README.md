@@ -11,11 +11,17 @@ Treat it like a normal terminal, but ask for ai help when you want.
 ## Features
 
 💬 Type a shell command directly, ask the ai a question, or ask the ai to run a command for you. Intent is discovered in real time.
+
 ⌨️ Pipe your command along with a '?' to ai to ask it about the output. eg. 'dir |? how many files are in here?'
+
 🗃️ Add file(s) to your conversation context with @, eg. '@mycode.ps1 @mynotes.txt' 
+
 💾 Save the last AI response with save, eg. 'save mycode.py'
+
 🔁 gpt-4.1 or llm -- Model selection
+
 ⬅️ reset - Resets conversation history.
+
 👋 exit -- Quit
 
 ## Installation
