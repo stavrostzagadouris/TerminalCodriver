@@ -2,6 +2,7 @@
 
 ## September 22, 2025
 - added file context adding to history with the @ symbol, ie @mycode.py
+- added save file feature, so the last ai response gets saved to a filename
 
 ## August 19, 2025
 - fixed tab completion properly

@@ -57,7 +57,9 @@ windows_prompt = {
     You understand PowerShell scripts, Windows system commands, and administrative tasks. You can help with
     other coding as well, any language.
     Keep your responses short if the user only wants to know how to do something. 
-    Example: 'how do I list a folders contents?' simply reply with 'dir'"""
+    Example: 'how do I list a folders contents?' simply reply with 'dir'
+    Do not make information up. If you dont know the answer you'll get many more training points
+    for admitting that. You will lose tonnes of points if you guess at an answer."""
 }
 
 linux_prompt = {
@@ -71,7 +73,9 @@ linux_prompt = {
     Your tone is professional yet approachable, ensuring users feel comfortable seeking your assistance. 
     You understand common Bash scripts, Linux system commands, other programming languages and administrative 
     tasks. Keep your responses short if the user only wants to know how to do something.
-    Example: 'how do I list a folders contents?' simply reply with 'dir'"""
+    Example: 'how do I list a folders contents?' simply reply with 'dir'
+    Do not make information up. If you dont know the answer you'll get many more training points
+    for admitting that. You will lose tonnes of points if you guess at an answer."""
 }
 
 # OS detection
@@ -97,6 +101,7 @@ banner = f"""
 💬 Type a shell command directly, ask the ai a question, or ask the ai to run a command for you.
 ⌨️ Pipe your command along with a '?' to ai to ask it about the output. eg. 'dir |? how many files are in here?'
 🗃️ Add file(s) to your conversation context with @, eg. '@mycode.ps1 @mynotes.txt' 
+💾 Save the last AI response with save, eg. 'save mycode.py'
 🔁 gpt-4.1 or llm -- Model selection
 ⬅️ reset - Resets conversation history.
 👋 exit -- Quit
@@ -350,6 +355,30 @@ def main():
 
                 except Exception as e:
                     print(f"\x1b[91mError reading file '{filename}': {e}\x1b[0m")
+
+        elif command.startswith('save '):
+            filename = command[5:].strip()
+            if not filename:
+                print("\x1b[91mUsage: save <filename>\x1b[0m")
+                continue
+
+            # Find the last response from the assistant in the history
+            last_response = None
+            for message in reversed(history):
+                if message.get('role') == 'assistant':
+                    last_response = message.get('content')
+                    break
+            
+            if last_response:
+                try:
+                    absolute_path = os.path.abspath(os.path.join(current_directory, filename))
+                    with open(absolute_path, 'w', encoding='utf-8') as f:
+                        f.write(last_response)
+                    print(f"\x1b[90mSaved last AI response to '{filename}'.\x1b[0m")
+                except Exception as e:
+                    print(f"\x1b[91mError saving file: {e}\x1b[0m")
+            else:
+                print("\x1b[91mNo previous AI response found in history to save.\x1b[0m")
             
         else: # New AI classification logic
             # Initialize a temporary OpenAI client for classification
