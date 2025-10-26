@@ -2,6 +2,8 @@ Repository Guidelines
 
 ---
 
+DO NOT RUN GIT COMMANDS YOURSELF. LEAVE THAT UP TO THE USER.
+
 ## Project Structure & Module Organization
 - **src/** – TypeScript source code (React components, hooks, utilities).
 - **tests/** – Jest unit tests mirroring the `src` tree.
