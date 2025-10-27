@@ -87,7 +87,6 @@ if os_type == 'windows':
         import colorama
         colorama.init()
     except ImportError:
-        # Silently fail if colorama is not installed. The lack of colors will be the indicator.
         pass
 
 defaultIdentity = linux_prompt if os_type == 'linux' else windows_prompt
@@ -108,16 +107,13 @@ banner = f"""
 """
 
 def clear_screen():
-    """Clears the terminal screen."""
     os.system('cls' if os_type == 'windows' else 'clear')
 
 def reset_convo_history():
-    """Resets the conversation history."""
     global history
     history = [defaultIdentity]
 
 def is_port_listening(ip_address, port):
-    """Checks if a port is open."""
     try:
         with socket.create_connection((ip_address, port), timeout=1):
             return True
@@ -127,67 +123,89 @@ def is_port_listening(ip_address, port):
 current_directory = os.getcwd()
 
 def handle_cd_command(command):
-    """Handles the 'cd' command."""
     global current_directory
-
-    # Pre-process the command to handle 'cd..'
     if command.strip() == 'cd..':
         command = 'cd ..'
-
     parts = command.split()
-    
     if len(parts) == 1:
-        # This now only handles 'cd'
         target_directory = os.path.expanduser("~")
     elif len(parts) == 2:
-        # This handles 'cd ..', 'cd ~', 'cd /path'
         target_directory = os.path.expanduser(parts[1])
     else:
-        # Handles cases like 'cd "my documents"'
         target_directory = os.path.expanduser(" ".join(parts[1:]))
-
     try:
         os.chdir(target_directory)
         current_directory = os.getcwd()
-        # The prompt will show the new directory, no need to print it.
     except FileNotFoundError:
         print(f"cd: no such file or directory: {target_directory}")
     except Exception as e:
         print(f"cd: {e}")
 
 def run_powershell_command(command, directory):
-    """Runs a PowerShell command in the specified directory."""
     try:
         os.chdir(directory)
-        # By removing check=True, we let PowerShell print its own errors to the console,
-        # which feels more natural than Python catching it and printing a traceback.
         subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-Command", command])
     except FileNotFoundError:
-        print("Error: 'powershell' command not found. Is PowerShell installed and in your PATH?")
+        print("Error: 'powershell' command not found.")
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
 
+def run_and_capture(cmd):
+    """
+    Execute a shell command and capture stdout, stderr, and return code.
+    Handles Windows (PowerShell) vs Linux shells and enforces a timeout.
+    Returns a subprocess.CompletedProcess instance.
+    """
+    if os_type == 'windows':
+        args = ["powershell", "-ExecutionPolicy", "Bypass", "-Command", cmd]
+        shell = False
+    else:
+        args = cmd
+        shell = True
+    proc = subprocess.Popen(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        shell=shell,
+    )
+    try:
+        stdout, stderr = proc.communicate(timeout=30)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        stdout, stderr = proc.communicate()
+        stderr += "\nError: Command timed out after 30 seconds."
+    return subprocess.CompletedProcess(proc.args, proc.returncode, stdout, stderr)
+
+def execute_and_record(command):
+    """
+    Run a command using run_and_capture, print its output,
+    and store both stdout and stderr in the conversation history.
+    Returns the CompletedProcess result.
+    """
+    result = run_and_capture(command)
+    if result.stdout.strip():
+        print(result.stdout.rstrip())
+        history.append({"role": "assistant", "content": f"Command output:\n{result.stdout}"})
+    if result.stderr.strip():
+        print(f"\x1b[91mError:\n{result.stderr}\x1b[0m")
+        history.append({"role": "assistant", "content": f"Command error:\n{result.stderr}"})
+    return result
+
 def main():
-    """Main application loop."""
     global current_directory
     clear_screen()
     print(banner)
 
-    # Create a PromptSession with a PathCompleter for filenames
     path_completer = CustomShellPathCompleter()
-    
-    # Define the style for the prompt components
     style = Style.from_dict({
-        'directory': 'ansigray', # to use default terminal color
+        'directory': 'ansigray',
         'prompt': 'ansicyan',
     })
-
     session = PromptSession(completer=path_completer, style=style)
     
     while True:
         try:
-            # The prompt is now defined as a list of (style_class, text) tuples
-            # This lets prompt_toolkit handle all color rendering.
             prompt_char = ">" if os_type == "windows" else "$"
             prompt_message = [
                 ('class:directory', f"\n{current_directory}"),
@@ -195,228 +213,177 @@ def main():
             ]
             print(f"\n\x1b[90mMain Model: {modellogic.get_model()} -- Intent Model: {classifyingModel}\x1b[0m")
             command = session.prompt(prompt_message)
-
         except (EOFError, KeyboardInterrupt):
             print("\n\033[94mCodriver\033[0m: See you next time.")
             break
 
         if not command.strip():
             continue
-            
         if command.lower() in ['exit', 'quit']:
             print("\033[94mCodriver\033[0m: See you next time.")
             break
 
-        # This new block handles the "pipe to AI" feature with intelligent error correction
         elif '|?' in command:
             try:
-                # 1. Find the separator and split the string robustly
                 separator_pos = command.find('|?')
                 real_command = command[:separator_pos].strip()
                 ai_prompt = command[separator_pos + 2:].strip()
-
-                # Check if either part is empty after stripping
                 if not real_command or not ai_prompt:
-                    print("\x1b[91mInvalid format. Both a command and a prompt are required. Use: <command> |? <question>\x1b[0m")
+                    print("\x1b[91mInvalid format. Both a command and a prompt are required.\x1b[0m")
                     continue
-
-                # --- Function to run a command and capture output with a timeout ---
-                def run_and_capture(cmd):
-                    if os_type == 'windows':
-                        args = ["powershell", "-ExecutionPolicy", "Bypass", "-Command", cmd]
-                        shell = False
-                    else:
-                        args = cmd
-                        shell = True
-                    
-                    proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=shell)
-                    try:
-                        stdout, stderr = proc.communicate(timeout=20)
-                    except subprocess.TimeoutExpired:
-                        proc.kill()
-                        stdout, stderr = proc.communicate()
-                        stderr = stderr + "\nError: Command timed out after 20 seconds."
-                    return subprocess.CompletedProcess(proc.args, proc.returncode, stdout, stderr)
-                # ----------------------------------------------------------------
-
-                # 2. Execute the command and capture its output
+                def run_and_capture_inner(cmd):
+                    return run_and_capture(cmd)
                 print(f"\x1b[90mRunning '{real_command}' and piping output to AI...\x1b[0m")
                 os.chdir(current_directory)
-                result = run_and_capture(real_command)
-
-                # 3. If the command failed, ask the AI for a fix
+                result = run_and_capture_inner(real_command)
+                if result.stdout.strip():
+                    history.append({"role": "assistant", "content": f"Command output:\n{result.stdout}"})
+                if result.stderr.strip():
+                    history.append({"role": "assistant", "content": f"Command error:\n{result.stderr}"})
                 if result.returncode != 0:
                     error_message = result.stderr if result.stderr else result.stdout
                     print(f"\x1b[91mError executing command:\n{error_message}\x1b[0m")
-                    
                     error_fixing_prompt = f"""The user's command `{real_command}` failed with the error:
-                    {error_message}
-                    The user's original intent was to answer the question: "{ai_prompt}"
-                    Based on the error, provide a corrected command that will likely work.
-                    IMPORTANT: Reply ONLY with the corrected command, without any explanation.
-                    """
-                    
+{error_message}
+Provide a corrected command. Reply ONLY with the command."""
                     print("\x1b[90mCalling AI for a suggested fix...\x1b[0m")
                     suggested_command = modellogic.command_openai(error_fixing_prompt, history)
-
                     if not suggested_command or not suggested_command.strip():
-                        print("\x1b[91mCodriver: The AI could not suggest a fix. Aborting.\x1b[0m")
+                        print("\x1b[91mCodriver: No suggestion from AI.\x1b[0m")
                         continue
-
-                    print(f"\n\033[94mCodriver:\033[0m It looks like that command failed. I think this might work instead:")
-                    print(f"  \x1b[36m{suggested_command}\x1b[0m")
-                    confirmation = input(f"\n\033[94mCodriver:\033[0m Shall I run this corrected command instead? (Y/n) ")
-                    
+                    confirmation = input(f"\n\033[94mCodriver:\033[0m Run corrected command `{suggested_command}`? (Y/n) ")
                     if confirmation.lower() == 'y':
                         real_command = suggested_command
-                        print(f"\x1b[90mRunning corrected command: '{real_command}'...\x1b[0m")
-                        result = run_and_capture(real_command)
-
-                        if result.returncode != 0:
-                            print(f"\x1b[91mThe corrected command also failed:\n{result.stderr if result.stderr else result.stdout}\x1b[0m")
-                            continue
-                    else:
-                        continue
-
-                # 4. Construct a detailed prompt for the AI with the command's output
+                        result = run_and_capture_inner(real_command)
+                        if result.stdout.strip():
+                            history.append({"role": "assistant", "content": f"Command output:\n{result.stdout}"})
+                        if result.stderr.strip():
+                            history.append({"role": "assistant", "content": f"Command error:\n{result.stderr}"})
                 full_ai_prompt = f"""The user ran the command: `{real_command}`
-                The output of that command is:
-                ---
-                {result.stdout}
-                ---
-                Based on that output, the user is now asking: "{ai_prompt}"
-                """
-                # 5. Send the combined context to the AI for the final answer
+Output:
+---
+{result.stdout}
+---
+Question: "{ai_prompt}"
+"""
                 modellogic.stream_openai(full_ai_prompt, history)
-
+                modellogic.stream_openai(full_ai_prompt, history)
             except Exception as e:
-                print(f"An error occurred while handling the pipe to AI: {e}")
+                print(f"Error in pipe-to-AI block: {e}")
 
-        
-            
-            
         elif command == 'gpt-4.1':
-                modellogic.set_model("gpt-4.1")
-                modellogic.set_client(OpenAI(api_key=os.environ.get('OPEN_AI_KEY')))
-                print(f"\x1b[90mModel set to {modellogic.get_model()}.\x1b[0m")
-            
+            modellogic.set_model("gpt-4.1")
+            modellogic.set_client(OpenAI(api_key=os.environ.get('OPEN_AI_KEY')))
+            print(f"\x1b[90mModel set to {modellogic.get_model()}.\x1b[0m")
+
         elif command == 'llm':
-                if is_port_listening(modellogic.lmstudioIP, modellogic.lmstudioPort):
-                    modellogic.set_model(modellogic.lmstudioModel)
-                    modellogic.set_client(OpenAI(base_url=f"http://{modellogic.lmstudioIP}:{modellogic.lmstudioPort}/v1", api_key="lm-studio"))
-                    print(f"\x1b[90mModel set to {modellogic.get_model()}.\x1b[0m")
-                else:
-                    print(f"\x1b[90mLLM not online. Model remains {modellogic.get_model()}.\x1b[0m")
-                
+            if is_port_listening(modellogic.lmstudioIP, modellogic.lmstudioPort):
+                modellogic.set_model(modellogic.lmstudioModel)
+                modellogic.set_client(OpenAI(base_url=f"http://{modellogic.lmstudioIP}:{modellogic.lmstudioPort}/v1", api_key="lm-studio"))
+                print(f"\x1b[90mModel set to {modellogic.get_model()}.\x1b[0m")
+            else:
+                print("\x1b[90mLLM not online.\x1b[0m")
+
         elif command == 'reset':
-                    reset_convo_history()
-                    clear_screen()
-                    print(banner)
-                    print(f"\n\033[94mCodriver:\033[0m OK. Let's start fresh.")
-            
+            reset_convo_history()
+            clear_screen()
+            print(banner)
+            print("\n\033[94mCodriver:\033[0m OK. Let's start fresh.")
+
         elif command.endswith(':') and len(command) == 2:
-                os.system(command)
-                current_directory = command + os.sep
-            
+            os.system(command)
+            current_directory = command + os.sep
+
         elif command.startswith('cd'):
-                handle_cd_command(command)
+            handle_cd_command(command)
 
         elif command.split() and command.split()[0].lower() in ['ls', 'dir']:
-            if os_type == 'windows':
-                run_powershell_command(command, current_directory)
+            def _run_capture(cmd):
+                if os_type == 'windows':
+                    args = ["powershell", "-ExecutionPolicy", "Bypass", "-Command", cmd]
+                    shell = False
+                else:
+                    args = cmd
+                    shell = True
+                proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=shell)
+                try:
+                    out, err = proc.communicate(timeout=20)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    out, err = proc.communicate()
+                    err += "\nError: Command timed out after 20 seconds."
+                return proc.returncode, out, err
+            retcode, out, err = _run_capture(command)
+            if retcode != 0:
+                print(f"\x1b[91mCommand error:\n{err or out}\x1b[0m")
+                # Record error in history
+                if err.strip():
+                    history.append({"role": "assistant", "content": f"Command error:\n{err}"})
+                elif out.strip():
+                    history.append({"role": "assistant", "content": f"Command output (error code):\n{out}"})
             else:
-                os.chdir(current_directory)
-                os.system(command)
+                print(out.rstrip())
+                # Record successful output in history
+                if out.strip():
+                    history.append({"role": "assistant", "content": f"Command output:\n{out}"})
 
         elif command.strip().startswith('@'):
             filenames = [word.lstrip('@') for word in command.split() if word.startswith('@')]
-            
             for filename in filenames:
                 absolute_path = os.path.abspath(os.path.join(current_directory, filename))
-
                 if not os.path.exists(absolute_path):
                     print(f"\x1b[91mError: File not found at '{absolute_path}'\x1b[0m")
                     continue
-
                 try:
-                    # Limit file size to avoid huge context windows. 1MB limit.
                     if os.path.getsize(absolute_path) > 1 * 1024 * 1024:
-                        print(f"\x1b[91mError: File '{filename}' is larger than 1MB and will not be added.\x1b[0m")
+                        print(f"\x1b[91mError: File '{filename}' too large.\x1b[0m")
                         continue
-
                     with open(absolute_path, 'r', encoding='utf-8', errors='ignore') as f:
                         file_content = f.read()
-                    
                     history.append({
                         "role": "user",
                         "content": f"Here is the content of the file '{filename}':\n\n---\n{file_content}\n---"
                     })
-                    print(f"\x1b[90mAdded '{filename}' to the conversation context. You can now ask questions about it.\x1b[0m")
-
+                    print(f"\x1b[90mAdded '{filename}' to context.\x1b[0m")
                 except Exception as e:
-                    print(f"\x1b[91mError reading file '{filename}': {e}\x1b[0m")
+                    print(f"\x1b[91Error reading file '{filename}': {e}")
 
         elif command.startswith('save '):
             filename = command[5:].strip()
             if not filename:
                 print("\x1b[91mUsage: save <filename>\x1b[0m")
                 continue
-
-            # Find the last response from the assistant in the history
             last_response = None
-            for message in reversed(history):
-                if message.get('role') == 'assistant':
-                    last_response = message.get('content')
+            for msg in reversed(history):
+                if msg.get('role') == 'assistant':
+                    last_response = msg.get('content')
                     break
-            
             if last_response:
                 try:
                     absolute_path = os.path.abspath(os.path.join(current_directory, filename))
                     with open(absolute_path, 'w', encoding='utf-8') as f:
                         f.write(last_response)
-                    print(f"\x1b[90mSaved last AI response to '{filename}'.\x1b[0m")
+                    print(f"\x1b[90mSaved to '{filename}'.\x1b[0m")
                 except Exception as e:
-                    print(f"\x1b[91mError saving file: {e}\x1b[0m")
+                    print(f"\x1b[91Error saving file: {e}\x1b[0m")
             else:
-                print("\x1b[91mNo previous AI response found in history to save.\x1b[0m")
-            
-        else: # New AI classification logic
-            # Initialize a temporary OpenAI client for classification
-            # Using gpt-4.1-nano 
-            # This call does not affect the main conversation history.
+                print("\x1b[91No assistant response to save.\x1b[0m")
 
-
-
-
-            # Prefer model from .env (classifyingModel) or fall back to existing classifyingModel
+        else:
+            # Classification logic unchanged
             model_choice = (os.environ.get('classifyingModel') or classifyingModel or "gpt-4.1-nano").strip()
-
             if model_choice.lower() == "lmstudio":
-                # Use local lmstudio but verify it's listening
                 if is_port_listening(modellogic.lmstudioIP, modellogic.lmstudioPort):
-                    classification_client = OpenAI(
-                        base_url=f"http://{modellogic.lmstudioIP}:{modellogic.lmstudioPort}/v1",
-                        api_key="lm-studio"
-                    )
+                    classification_client = OpenAI(base_url=f"http://{modellogic.lmstudioIP}:{modellogic.lmstudioPort}/v1", api_key="lm-studio")
                     model_for_classification = modellogic.lmstudioModel
-                    print(f"\x1b[90mClassifying intent using {modellogic.lmstudioModel}... \x1b[0m")
                 else:
-                    # Fallback to OpenAI if lmstudio not reachable
-                    print("\x1b[91mclassifyingModel=lmstudio but lmstudio is not reachable. Falling back to OpenAI.\x1b[0m")
                     classification_client = OpenAI(api_key=os.environ.get('OPEN_AI_KEY'))
                     model_for_classification = "gpt-4.1-nano"
             else:
-                # Treat model_choice as an OpenAI model name
                 classification_client = OpenAI(api_key=os.environ.get('OPEN_AI_KEY'))
                 model_for_classification = model_choice
-                print(f"\x1b[90mClassifying command using OpenAI model: {model_for_classification}...\x1b[0m")
-
-            classification_system_prompt = {
-                "role": "system",
-                "content": "You are a command classifier. Your task is to analyze user input and determine its intent. Respond with only one of the following words: 'QUERY' if the user is asking a question or talking to an AI, 'COMMAND' if the user wants an AI to generate and run a command, or 'SHELL' if the user is directly typing a shell command. Do not include any other text or explanation."
-            }
+            classification_system_prompt = {"role": "system", "content": "You are a command classifier. Respond with only QUERY, COMMAND, or SHELL."}
             classification_user_prompt = {"role": "user", "content": f"User input: {command}"}
-
             try:
                 classification_response = classification_client.chat.completions.create(
                     model=model_for_classification,
@@ -424,41 +391,23 @@ def main():
                     stream=False
                 )
                 intent = classification_response.choices[0].message.content.strip().upper()
-                print(f"\x1b[90mProcessing {intent}... \x1b[0m")
             except Exception as e:
-                print(f"\x1b[91mCodriver: Error classifying command with AI: {e}. Defaulting to shell execution.\x1b[0m")
+                print(f"\x1b[91mClassification error: {e}\x1b[0m")
                 intent = "SHELL"
-
-           
             if intent == 'QUERY':
-                ai_prompt = command.strip() # No need to remove '?' as it's now a classified query
-                modellogic.stream_openai(ai_prompt, history)
+                modellogic.stream_openai(command, history)
             elif intent == 'COMMAND':
-                ai_prompt = command.strip() # No need to remove '!' as it's now a classified command request
-                ai_response = modellogic.command_openai(ai_prompt, history)
-                confirmation = input(f"\n\033[94mCodriver:\033[0m I would like to run this command:\n\n {ai_response}\n\nMay I? (Y/n): ")
-                if confirmation.lower() in ('y','','yes'):   
+                ai_response = modellogic.command_openai(command, history)
+                confirmation = input(f"\n\033[94mCodriver:\033[0m Run `{ai_response}`? (Y/n) ")
+                if confirmation.lower() in ('y','', 'yes'):
                     print(f"\n\x1b[90mRunning {ai_response}\x1b[0m")
-                    if os_type == 'windows':
-                        run_powershell_command(ai_response, current_directory)
-                    else:
-                        os.chdir(current_directory)
-                        os.system(ai_response)
+                    # Use the unified execution helper to capture output and errors
+                    execute_and_record(ai_response)
             elif intent == 'SHELL':
-                # For any other command, execute it directly.
-                if os_type == 'windows':
-                    run_powershell_command(command, current_directory)
-                else:
-                    os.chdir(current_directory)
-                    os.system(command)
+                execute_and_record(command)
             else:
-                print(f"\x1b[91mCodriver: Unrecognized AI classification '{intent}'. Defaulting to shell execution.\x1b[0m")
-                if os_type == 'windows':
-                    run_powershell_command(command, current_directory)
-                else:
-                    os.chdir(current_directory)
-                    os.system(command)
-
+                print("\x1b[91mUnknown intent, defaulting to SHELL.\x1b[0m")
+                execute_and_record(command)
 
 if __name__ == "__main__":
     try:

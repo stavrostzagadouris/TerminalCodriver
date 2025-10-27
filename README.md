@@ -14,16 +14,17 @@ Treat it like a normal terminal, but ask for ai help when you want.
 
 ⌨️ Pipe your command along with a '?' to ai to ask it about the output. eg. 'dir |? how many files are in here?'
 
-🗃️ Add file(s) to your conversation context with @, eg. '@mycode.ps1 @mynotes.txt' 
+ 📗 Add file(s) to your conversation context with @, eg. '@mycode.ps1 @mynotes.txt' 
 
-💾 Save the last AI response with save, eg. 'save mycode.py'
+ 💾 Save the last AI response with save, eg. 'save mycode.py'
 
-🔁 gpt-4.1 or llm -- Model selection
+ 🔁 gpt-4.1 or llm -- Model selection
 
-⬅️ reset - Resets conversation history.
+ ⬅️ reset - Resets conversation history.
 
-👋 exit -- Quit
+ 👋 exit -- Quit
 
+  📝 Added new feature: Command execution now captures both stdout and stderr, ensuring errors are seen by the AI
 ## Installation
 
 To get started with TerminalCodriver, follow these steps:
